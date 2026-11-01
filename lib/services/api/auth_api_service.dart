@@ -104,9 +104,68 @@ class AuthApiService {
     }
   }
 
-  Future<ApiResponse<Map<String, dynamic>>> getMe() async {
+  Future<ApiResponse<Map<String, dynamic>>> getMe([String? userId]) async {
     try {
       final response = await _dio.get(_me);
+      if (response.statusCode == 200 && response.data != null) {
+        final body = response.data;
+        final data = body is Map ? (body['data'] ?? body) : null;
+        if (data is Map<String, dynamic>) {
+          return ApiResponse<Map<String, dynamic>>(
+            success: true,
+            statusCode: 200,
+            message: 'Success',
+            data: data,
+          );
+        }
+      }
+    } catch (_) {}
+
+    // Fallback 1: isAuthenticated (#5)
+    try {
+      final isAuth = await isAuthenticated();
+      if (isAuth.success && isAuth.data != null) {
+        final userData = isAuth.data!['user'] ?? isAuth.data;
+        if (userData is Map<String, dynamic>) {
+          return ApiResponse<Map<String, dynamic>>(
+            success: true,
+            statusCode: 200,
+            message: 'Success',
+            data: userData,
+          );
+        }
+      }
+    } catch (_) {}
+
+    // Fallback 2: user by id (#9)
+    if (userId != null && userId.isNotEmpty) {
+      try {
+        final response = await _dio.get('/api/auth/v1/$userId');
+        if (response.statusCode == 200 && response.data != null) {
+          final body = response.data;
+          final data = body is Map ? body['data'] : null;
+          if (data is Map<String, dynamic>) {
+            return ApiResponse<Map<String, dynamic>>(
+              success: true,
+              statusCode: 200,
+              message: 'Success',
+              data: data,
+            );
+          }
+        }
+      } catch (_) {}
+    }
+
+    return ApiResponse<Map<String, dynamic>>(
+      success: false,
+      statusCode: 400,
+      message: 'Failed to fetch current user',
+    );
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> getUserById(String userId) async {
+    try {
+      final response = await _dio.get('/api/auth/v1/$userId');
       return ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
         response.statusCode!,
@@ -115,6 +174,30 @@ class AuthApiService {
       return _errorResponse<Map<String, dynamic>>(e);
     }
   }
+
+  /// Endpoint #7A: PUT /api/auth/v1/:organizationId/:userId/profile-image
+  Future<ApiResponse<Map<String, dynamic>>> uploadProfileImage(
+    String organizationId,
+    String userId,
+    MultipartFile file,
+  ) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': file,
+      });
+      final response = await _dio.put(
+        '/api/auth/v1/$organizationId/$userId/profile-image',
+        data: formData,
+      );
+      return ApiResponse<Map<String, dynamic>>.fromJson(
+        response.data,
+        response.statusCode!,
+      );
+    } catch (e) {
+      return _errorResponse<Map<String, dynamic>>(e);
+    }
+  }
+
 
   Future<ApiResponse<Map<String, dynamic>>> logout() async {
     try {

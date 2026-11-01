@@ -12,6 +12,7 @@ import '../../../core/widgets/bmb_empty_state.dart';
 import '../../../core/widgets/bmb_kpi_tile.dart';
 import '../../../core/widgets/bmb_screen_header.dart';
 import '../../../core/widgets/bmb_tag.dart';
+import '../../../core/widgets/demo_banner.dart';
 import '../../../mock/mock_state.dart';
 import '../../../models/models.dart';
 
@@ -135,8 +136,10 @@ class _CustomerManagementScreenState
               ],
             ),
           ),
+          const DemoBanner(),
           Expanded(
             child: SingleChildScrollView(
+
               padding: EdgeInsets.symmetric(
                 horizontal: AppSpacing.horizontalPadding(context),
                 vertical: Gap.lg,

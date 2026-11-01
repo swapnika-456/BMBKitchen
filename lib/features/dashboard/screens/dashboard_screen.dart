@@ -125,16 +125,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   _buildHeader(context, activeOutlet?.name ?? 'Main Outlet',
                       state.isLoading),
 
-                  const SizedBox(height: Gap.md),
+                  // Quick Stats Block: "Right now" (independent of date filter)
+                  if (summary != null) ...[
+                    _buildQuickStatsSection(context, summary.quickStats, isMobile),
+                    const SizedBox(height: Gap.lg),
+                    const Divider(height: 1, color: AppColors.line),
+                    const SizedBox(height: Gap.lg),
+                  ],
 
                   // Scope Filter Chips
                   _buildScopeFilter(context, filter),
-
-                  const SizedBox(height: Gap.lg),
-
-                  // Quick Stats (Tables, Kitchen Queue, Low Stock, Day Closing)
-                  if (summary != null)
-                    _buildQuickStatsSection(context, summary.quickStats, isMobile),
 
                   const SizedBox(height: Gap.lg),
 
@@ -280,57 +280,86 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     bool isMobile,
   ) {
     final cols = isMobile ? 2 : 4;
-    return GridView.count(
-      crossAxisCount: cols,
-      crossAxisSpacing: Gap.md,
-      mainAxisSpacing: Gap.md,
-      childAspectRatio: isMobile ? 1.8 : 2.4,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _quickStatTile(
-          context,
-          key: const Key('quick_stat_tables'),
-          label: 'Tables Occupancy',
-          value: '${stats.tablesOccupied}/${stats.tablesTotal}',
-          subtext: 'Tables Occupied',
-          icon: Icons.table_restaurant_outlined,
-          color: AppColors.blue,
-          route: '/tables',
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: AppColors.leaf,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: Gap.sm),
+            Text(
+              'Right now',
+              style: AppText.h3.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: Gap.sm),
+            Expanded(
+              child: Text(
+                '• Live outlet status (real-time snapshot, independent of date filter)',
+                style: AppText.caption.copyWith(color: AppColors.muted),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
-        _quickStatTile(
-          context,
-          key: const Key('quick_stat_kitchen_queue'),
-          label: 'Kitchen Queue',
-          value: '${stats.kitchenQueueCount}',
-          subtext: 'Items in Queue',
-          icon: Icons.soup_kitchen_outlined,
-          color: AppColors.amber,
-          route: '/kitchen',
-        ),
-        _quickStatTile(
-          context,
-          key: const Key('quick_stat_low_stock'),
-          label: 'Low Stock Alerts',
-          value: '${stats.lowStockCount}',
-          subtext: 'Items Below Min',
-          icon: Icons.inventory_2_outlined,
-          color: stats.lowStockCount > 0 ? AppColors.chilli : AppColors.leaf,
-          route: '/stock',
-        ),
-        _quickStatTile(
-          context,
-          key: const Key('quick_stat_day_closing'),
-          label: 'Day Closing',
-          value: stats.dayClosingStatus,
-          subtext: stats.dayClosingDifference != null
-              ? 'Diff: ${_formatCurrency(stats.dayClosingDifference!)}'
-              : 'End of Day',
-          icon: Icons.point_of_sale_outlined,
-          color: stats.dayClosingStatus.toLowerCase() == 'completed'
-              ? AppColors.leaf
-              : AppColors.tandoor,
-          route: '/closing',
+        const SizedBox(height: Gap.md),
+        GridView.count(
+          crossAxisCount: cols,
+          crossAxisSpacing: Gap.md,
+          mainAxisSpacing: Gap.md,
+          childAspectRatio: isMobile ? 1.8 : 2.4,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _quickStatTile(
+              context,
+              key: const Key('quick_stat_tables'),
+              label: 'Tables Occupancy',
+              value: '${stats.tablesOccupied}/${stats.tablesTotal}',
+              subtext: 'Tables Occupied',
+              icon: Icons.table_restaurant_outlined,
+              color: AppColors.blue,
+              route: '/tables',
+            ),
+            _quickStatTile(
+              context,
+              key: const Key('quick_stat_kitchen_queue'),
+              label: 'Kitchen Queue',
+              value: '${stats.kitchenQueueCount}',
+              subtext: 'Items in Queue',
+              icon: Icons.soup_kitchen_outlined,
+              color: AppColors.amber,
+              route: '/kitchen',
+            ),
+            _quickStatTile(
+              context,
+              key: const Key('quick_stat_low_stock'),
+              label: 'Low Stock Alerts',
+              value: '${stats.lowStockCount}',
+              subtext: 'Items Below Min',
+              icon: Icons.inventory_2_outlined,
+              color: stats.lowStockCount > 0 ? AppColors.chilli : AppColors.leaf,
+              route: '/stock',
+            ),
+            _quickStatTile(
+              context,
+              key: const Key('quick_stat_day_closing'),
+              label: 'Day Closing',
+              value: stats.dayClosingStatus,
+              subtext: "Today's Status",
+              icon: Icons.point_of_sale_outlined,
+              color: stats.dayClosingStatus.toLowerCase() == 'completed'
+                  ? AppColors.leaf
+                  : AppColors.tandoor,
+              route: '/closing',
+            ),
+          ],
         ),
       ],
     );
@@ -406,7 +435,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           iconBg: AppColors.tandoorSoft,
           iconFg: AppColors.tandoor,
           deltaPct: kpis.deltaVsPrevious?.salesPercent,
-          deltaPeriod: 'vs yesterday',
+          deltaPeriod: kpis.deltaVsPrevious?.salesPercent != null ? 'vs yesterday' : null,
         ),
         BmbKpiTile(
           label: 'Orders Count',
@@ -415,7 +444,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           iconBg: AppColors.blueSoft,
           iconFg: AppColors.blue,
           deltaPct: kpis.deltaVsPrevious?.ordersPercent,
-          deltaPeriod: 'vs yesterday',
+          deltaPeriod: kpis.deltaVsPrevious?.ordersPercent != null ? 'vs yesterday' : null,
         ),
         BmbKpiTile(
           label: 'Average Bill',
@@ -424,7 +453,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           iconBg: AppColors.leafSoft,
           iconFg: AppColors.leaf,
           deltaPct: kpis.deltaVsPrevious?.avgBillPercent,
-          deltaPeriod: 'vs yesterday',
+          deltaPeriod: kpis.deltaVsPrevious?.avgBillPercent != null ? 'vs yesterday' : null,
         ),
         BmbKpiTile(
           label: 'Expenses',
@@ -433,7 +462,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           iconBg: AppColors.chilliSoft,
           iconFg: AppColors.chilli,
           deltaPct: kpis.deltaVsPrevious?.expensesPercent,
-          deltaPeriod: 'vs yesterday',
+          deltaPeriod: kpis.deltaVsPrevious?.expensesPercent != null ? 'vs yesterday' : null,
         ),
       ],
     );
@@ -567,6 +596,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 style: AppText.caption,
               ),
             ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Inferred mapping: preparing = queued + preparing, completed = served',
+            style: AppText.caption.copyWith(color: AppColors.muted, fontSize: 10),
           ),
           const SizedBox(height: Gap.md),
           _ticketRow('Completed', kitchen.completed, AppColors.leaf),

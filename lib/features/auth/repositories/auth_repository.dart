@@ -133,6 +133,23 @@ class AuthRepository {
     return null;
   }
 
+  Future<User?> uploadProfileImage({
+    required String organizationId,
+    required String userId,
+    required dynamic file, // MultipartFile
+  }) async {
+    final response = await _apiService.uploadProfileImage(organizationId, userId, file);
+    if (response.success) {
+      return await checkAuth();
+    }
+    throw Exception(response.message);
+  }
+
+  Future<String> forgotPassword(String email) async {
+    final response = await _apiService.forgotPassword(email);
+    return response.message;
+  }
+
   Future<void> logout() async {
     try {
       await _apiService.logout();
@@ -142,3 +159,4 @@ class AuthRepository {
     await SessionManager.clear();
   }
 }
+

@@ -12,7 +12,9 @@ import '../../../core/widgets/bmb_empty_state.dart';
 import '../../../core/widgets/bmb_kpi_tile.dart';
 import '../../../core/widgets/bmb_screen_header.dart';
 import '../../../core/widgets/bmb_tag.dart';
+import '../../../core/widgets/demo_banner.dart';
 import '../../../mock/mock_state.dart';
+
 import '../../../models/expense.dart';
 
 const List<String> kExpenseCategories = [
@@ -148,9 +150,12 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                   onPressed: () => _showAddExpenseDialog(context),
                 ),
               ),
-              const SizedBox(height: Gap.lg),
+              const SizedBox(height: Gap.md),
+              const DemoBanner(),
+              const SizedBox(height: Gap.md),
 
               // KPI Tiles (2*2 grid on mobile/tablet)
+
               GridView(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: kpiCrossAxisCount,

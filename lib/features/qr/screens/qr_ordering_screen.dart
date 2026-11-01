@@ -10,7 +10,10 @@ import '../../../core/widgets/bmb_button.dart';
 import '../../../core/widgets/bmb_card.dart';
 import '../../../core/widgets/bmb_screen_header.dart';
 import '../../../core/widgets/bmb_tag.dart';
+import '../../../core/widgets/demo_banner.dart';
 import '../../../mock/mock_state.dart';
+
+
 
 class QrOrderingScreen extends ConsumerStatefulWidget {
   const QrOrderingScreen({super.key});
@@ -71,8 +74,10 @@ class _QrOrderingScreenState extends ConsumerState<QrOrderingScreen> {
               onPressed: () => _simulateQrOrder(state),
             ),
           ),
+          const DemoBanner(),
           Expanded(
             child: LayoutBuilder(
+
               builder: (context, constraints) {
                 final width = constraints.maxWidth;
                 final isWide = width >= 860;

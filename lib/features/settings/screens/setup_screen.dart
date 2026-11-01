@@ -8,7 +8,9 @@ import '../../../core/widgets/bmb_button.dart';
 import '../../../core/widgets/bmb_card.dart';
 import '../../../core/widgets/bmb_key_value_row.dart';
 import '../../../core/widgets/bmb_section_header.dart';
+import '../../../core/widgets/demo_banner.dart';
 import '../../../mock/mock_state.dart';
+
 import '../controllers/active_outlet_provider.dart';
 import '../../../models/restaurant_setup.dart';
 
@@ -132,9 +134,11 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
               ],
             ),
           ),
+          const DemoBanner(),
 
           // Main Content
           Expanded(
+
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(
                 horizontal: AppSpacing.horizontalPadding(context),

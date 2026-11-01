@@ -1,26 +1,21 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../../core/money/money_format.dart';
-import '../../../core/money/paise.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/bmb_bottom_sheet.dart';
 import '../../../core/widgets/bmb_button.dart';
-import '../../../core/widgets/bmb_card.dart';
 import '../../../core/widgets/bmb_empty_state.dart';
 import '../../../core/widgets/bmb_section_header.dart';
 import '../../../core/widgets/bmb_tag.dart';
 import '../../../core/widgets/bmb_text_field.dart';
-import '../../../core/widgets/lifecycle_list_view.dart';
-import '../../../mock/mock_state.dart';
 import '../../../models/models.dart';
 import '../../../routing/app_router.dart';
-import '../../settings/controllers/tax_settings_controller.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../../settings/controllers/active_outlet_provider.dart';
+
 import '../providers/table_providers.dart';
 
 class TableManagementScreen extends ConsumerStatefulWidget {
@@ -49,20 +44,21 @@ class _TableManagementScreenState extends ConsumerState<TableManagementScreen> {
     super.dispose();
   }
 
-  bool _canManageTables(Role role) {
-    final name = role.name.toLowerCase();
+  bool _canManageTables(String? role) {
+    if (role == null) return false;
+    final name = role.toLowerCase();
     return name == 'owner' || name == 'admin' || name == 'cto';
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(bmbStateProvider);
+    final user = ref.watch(authControllerProvider).value;
     final isTablet = MediaQuery.of(context).size.width >= 600;
 
     final activeTablesAsync = ref.watch(activeTablesProvider);
     final inactiveTablesAsync = ref.watch(inactiveTablesProvider);
 
-    final canManage = _canManageTables(state.currentUserRole);
+    final canManage = _canManageTables(user?.role);
 
     return SingleChildScrollView(
       padding: EdgeInsets.symmetric(
@@ -114,12 +110,7 @@ class _TableManagementScreenState extends ConsumerState<TableManagementScreen> {
                       label: 'Takeaway Order',
                       icon: const Icon(Icons.shopping_bag_outlined, size: 18),
                       onPressed: () {
-                        final order = ref
-                            .read(bmbStateProvider.notifier)
-                            .startNewOrder(type: OrderType.takeaway);
-                        ref
-                            .read(appRouterProvider)
-                            .go('/pos?orderId=${order.id}');
+                        ref.read(appRouterProvider).go('/pos');
                       },
                     ),
                   ],
@@ -161,12 +152,7 @@ class _TableManagementScreenState extends ConsumerState<TableManagementScreen> {
                         label: 'Takeaway Order',
                         icon: const Icon(Icons.shopping_bag_outlined, size: 18),
                         onPressed: () {
-                          final order = ref
-                              .read(bmbStateProvider.notifier)
-                              .startNewOrder(type: OrderType.takeaway);
-                          ref
-                              .read(appRouterProvider)
-                              .go('/pos?orderId=${order.id}');
+                          ref.read(appRouterProvider).go('/pos');
                         },
                       ),
                     ),
@@ -362,21 +348,29 @@ class _TableManagementScreenState extends ConsumerState<TableManagementScreen> {
                                 Expanded(flex: 2, child: Text('${t.cap}', style: AppText.body)),
                                 Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: statusWidget)),
                                 SizedBox(
-                                  width: 80,
-                                  child: Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton(
-                                      onPressed: () {
-                                        if (isActive) {
-                                          _showEditTableModal(context, ref, t);
-                                        } else {
-                                          ref.read(inactiveTablesProvider.notifier).recoverTable(t.id);
-                                        }
-                                      },
-                                      child: Text(isActive ? 'Edit' : 'Restore', style: AppText.caption),
-                                    ),
+                                  width: isActive ? 80 : 130,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      TextButton(
+                                        onPressed: () {
+                                          if (isActive) {
+                                            _showEditTableModal(context, ref, t);
+                                          } else {
+                                            ref.read(inactiveTablesProvider.notifier).recoverTable(t.id);
+                                          }
+                                        },
+                                        child: Text(isActive ? 'Edit' : 'Restore', style: AppText.caption),
+                                      ),
+                                      if (!isActive)
+                                        IconButton(
+                                          icon: const Icon(Icons.delete_forever, size: 16, color: AppColors.chilli),
+                                          onPressed: () => _confirmHardDelete(context, ref, t),
+                                        ),
+                                    ],
                                   ),
                                 ),
+
                               ],
                             ),
                           );
@@ -555,6 +549,9 @@ class _TableManagementScreenState extends ConsumerState<TableManagementScreen> {
     WidgetRef ref,
     RestaurantTable table,
   ) {
+    final user = ref.read(authControllerProvider).value;
+    final canManage = _canManageTables(user?.role);
+
     showBmbModal(
       context: context,
       title: 'Table ${table.name}',
@@ -563,10 +560,19 @@ class _TableManagementScreenState extends ConsumerState<TableManagementScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Change table status or make a reservation.',
-            style: AppText.body,
+            'Seating: ${table.cap} guests • Area: ${table.area}',
+            style: AppText.caption.copyWith(color: AppColors.muted),
           ),
-          AppSpacing.gapHLg,
+          AppSpacing.gapHMd,
+          BmbPrimaryButton(
+            label: 'Take Dine-In Order',
+            icon: const Icon(Icons.receipt_long_outlined, size: 18),
+            onPressed: () {
+              Navigator.pop(context);
+              ref.read(appRouterProvider).go('/pos?tableId=${table.id}');
+            },
+          ),
+          AppSpacing.gapHMd,
           Row(
             children: [
               Expanded(
@@ -595,13 +601,50 @@ class _TableManagementScreenState extends ConsumerState<TableManagementScreen> {
             ],
           ),
           AppSpacing.gapHMd,
-          BmbPrimaryButton(
+          BmbSecondaryButton(
             label: 'Reserve Table',
+            icon: const Icon(Icons.bookmark_outline, size: 18),
             onPressed: () {
               Navigator.pop(context);
               _showReserveModal(context, ref, table);
             },
           ),
+          if (canManage) ...[
+            AppSpacing.gapHMd,
+            Row(
+              children: [
+                Expanded(
+                  child: BmbSecondaryButton(
+                    label: 'Edit Table',
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showEditTableModal(context, ref, table);
+                    },
+                  ),
+                ),
+                AppSpacing.gapWMd,
+                Expanded(
+                  child: BmbSecondaryButton(
+                    label: 'Deactivate',
+                    icon: const Icon(Icons.archive_outlined, size: 16, color: AppColors.chilli),
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      final success = await ref
+                          .read(activeTablesProvider.notifier)
+                          .deactivateTable(table.id);
+
+                      if (success && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Table ${table.name} deactivated')),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

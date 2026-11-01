@@ -44,7 +44,11 @@ import '../features/supply_chain/screens/purchase_management_screen.dart';
 import '../features/supply_chain/screens/vendor_management_screen.dart';
 import '../features/supply_chain/screens/recipe_management_screen.dart';
 import '../features/supply_chain/screens/wastage_screen.dart';
+import '../core/config/app_config.dart';
+import '../features/common/providers/sidebar_badges_provider.dart';
+import '../features/auth/screens/user_profile_screen.dart';
 import '../mock/mock_state.dart';
+
 
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
@@ -110,44 +114,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final bmbState = ref.watch(bmbStateProvider);
           final currentKey = state.uri.path.replaceAll('/', '');
 
-          // Calculate live badges
-          final activeKotCount = bmbState.orders
-              .expand((o) => o.kots)
-              .where((k) => k.status.isActive)
-              .length;
-
-          final occupiedTableCount = bmbState.tables
-              .where((t) => t.isOccupied)
-              .length;
-
-          final lowStockCount = bmbState.stockItems
-              .where((i) => i.isLow)
-              .length;
-
-          final openOnlineCount = bmbState.orders
-              .where(
-                (o) =>
-                    o.outlet == bmbState.activeOutletId &&
-                    o.type.name == 'online' &&
-                    o.isOpen,
-              )
-              .length;
-          final openDeliveryCount = bmbState.orders
-              .where(
-                (o) =>
-                    o.outlet == bmbState.activeOutletId &&
-                    o.type.name == 'delivery' &&
-                    o.isOpen,
-              )
-              .length;
+          // Live sidebar badges via single lightweight provider (Part B.2)
+          final sidebarBadges = ref.watch(sidebarBadgesProvider);
           final unreadNotificationCount = ref.watch(notificationBadgeProvider);
-          final openSupportCount = bmbState.tickets
-              .where(
-                (ticket) =>
-                    ticket.outlet == bmbState.activeOutletId &&
-                    ticket.status != 'Closed',
-              )
-              .length;
+
 
           final destinations = <BmbNavDestination>[
             // Overview
@@ -188,7 +158,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               label: 'Table Management (06)',
               icon: const Icon(Icons.table_restaurant_outlined),
               group: 'Operations',
-              badgeCount: occupiedTableCount > 0 ? occupiedTableCount : null,
+              badgeCount: sidebarBadges.tablesBadge,
             ),
             const BmbNavDestination(
               key: 'pos',
@@ -201,7 +171,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               label: 'KOT Management (08)',
               icon: const Icon(Icons.soup_kitchen_outlined),
               group: 'Operations',
-              badgeCount: activeKotCount > 0 ? activeKotCount : null,
+              badgeCount: sidebarBadges.kitchenBadge,
             ),
             const BmbNavDestination(
               key: 'captain',
@@ -223,18 +193,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               icon: Icon(Icons.shopping_bag_outlined),
               group: 'Orders',
             ),
-            BmbNavDestination(
+            const BmbNavDestination(
               key: 'delivery',
               label: 'Delivery Orders (12)',
               icon: Icon(Icons.two_wheeler_outlined),
-              badgeCount: openDeliveryCount > 0 ? openDeliveryCount : null,
               group: 'Orders',
             ),
             BmbNavDestination(
               key: 'online',
               label: 'Online Orders (13)',
-              icon: Icon(Icons.language_outlined),
-              badgeCount: openOnlineCount > 0 ? openOnlineCount : null,
+              icon: const Icon(Icons.language_outlined),
+              badgeCount: sidebarBadges.onlineBadge,
               group: 'Orders',
             ),
             const BmbNavDestination(
@@ -270,7 +239,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               label: 'Inventory (18)',
               icon: const Icon(Icons.inventory_2_outlined),
               group: 'Supply Chain',
-              badgeCount: lowStockCount > 0 ? lowStockCount : null,
+              badgeCount: sidebarBadges.stockBadge,
             ),
             const BmbNavDestination(
               key: 'purchase',
@@ -372,8 +341,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             BmbNavDestination(
               key: 'support',
               label: 'Support & Helpdesk (34)',
-              icon: Icon(Icons.help_outline),
-              badgeCount: openSupportCount > 0 ? openSupportCount : null,
+              icon: const Icon(Icons.help_outline),
+              badgeCount: sidebarBadges.supportBadge,
               group: 'Settings',
             ),
           ];
@@ -396,18 +365,51 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   ),
           );
 
+          final authUser = ref.watch(authControllerProvider).value;
+          final currentUserName = (authUser?.userName.isNotEmpty == true)
+              ? authUser!.userName
+              : (bmbState.currentUser.name.isNotEmpty
+                  ? bmbState.currentUser.name
+                  : 'Staff Member');
+          final currentUserRole = (authUser?.role.isNotEmpty == true)
+              ? authUser!.role.toUpperCase()
+              : bmbState.currentUserRole.name;
+          final currentUserPhotoUrl = authUser?.profileImage?.url;
+
+          // Role-aware and demo-screen aware filtering (Part B.2 & Part C)
+          final filteredDestinations = destinations.where((d) {
+            // Part C: Hide demo screens in release / when kShowDemoScreens is false
+            if (!kShowDemoScreens &&
+                const {'qr', 'crm', 'offers', 'loyalty', 'expenses'}.contains(d.key)) {
+              return false;
+            }
+            // Role-aware access: staff cannot access roles, subs, taxset, integrations
+            final r = authUser?.role.toLowerCase().trim() ?? 'staff';
+            if (r == 'staff') {
+              if (d.key == 'roles' ||
+                  d.key == 'subs' ||
+                  d.key == 'taxset' ||
+                  d.key == 'integrations') {
+                return false;
+              }
+            }
+            return true;
+          }).toList();
+
           return BmbResponsiveScaffold(
             currentRoute: currentKey,
             onNavigate: (key) => context.go('/$key'),
-            destinations: destinations,
+            destinations: filteredDestinations,
             activeOutletName: activeOutlet.name,
             availableOutlets: outlets.map((o) => o.name).toList(),
             onSelectOutlet: (name) {
               final found = outlets.firstWhere((o) => o.name == name);
               ref.read(bmbStateProvider.notifier).switchOutlet(found.id);
             },
-            currentUserName: bmbState.currentUser.name,
-            currentUserRole: bmbState.currentUserRole.name,
+            currentUserName: currentUserName,
+            currentUserRole: currentUserRole,
+            currentUserPhotoUrl: currentUserPhotoUrl,
+            onTapUser: () => context.go('/profile'),
             onResetData: () =>
                 ref.read(bmbStateProvider.notifier).resetAllData(),
             onLoadDemoData: () =>
@@ -417,6 +419,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
         routes: [
           GoRoute(
+            path: '/profile',
+            builder: (context, state) => const UserProfileScreen(),
+          ),
+          GoRoute(
             path: '/dashboard',
             builder: (context, state) => const DashboardScreen(),
           ),
@@ -424,6 +430,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/setup',
             builder: (context, state) => const SetupScreen(),
           ),
+
           GoRoute(
             path: '/staff',
             builder: (context, state) => const StaffScreen(),

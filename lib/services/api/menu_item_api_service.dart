@@ -350,6 +350,13 @@ class MenuItemApiService {
     }
   }
 
+  // #32A alias
+  Future<ApiResponse<void>> uploadImage(
+    String orgId,
+    String itemId,
+    List<MultipartFile> files,
+  ) => uploadImages(orgId, itemId, files);
+
   // #32B: DELETE /:organizationId/:menuItemId/images/:imageId
   Future<ApiResponse<void>> deleteImage(
     String orgId,

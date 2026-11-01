@@ -39,6 +39,8 @@ class BmbResponsiveScaffold extends StatefulWidget {
   final ValueChanged<String>? onSelectOutlet;
   final String currentUserName;
   final String currentUserRole;
+  final String? currentUserPhotoUrl;
+  final VoidCallback? onTapUser;
   final VoidCallback? onResetData;
   final VoidCallback? onLoadDemoData;
 
@@ -53,9 +55,12 @@ class BmbResponsiveScaffold extends StatefulWidget {
     this.onSelectOutlet,
     required this.currentUserName,
     required this.currentUserRole,
+    this.currentUserPhotoUrl,
+    this.onTapUser,
     this.onResetData,
     this.onLoadDemoData,
   });
+
 
   @override
   State<BmbResponsiveScaffold> createState() => _BmbResponsiveScaffoldState();
@@ -357,24 +362,29 @@ class _BmbResponsiveScaffoldState extends State<BmbResponsiveScaffold> {
             padding: const EdgeInsets.only(bottom: 16),
             child: Tooltip(
               message: '${widget.currentUserName} · ${widget.activeOutletName}',
-              child: Builder(
-                builder: (scaffoldContext) => InkWell(
-                  onTap: () => Scaffold.of(scaffoldContext).openDrawer(),
-                  borderRadius: BorderRadius.circular(20),
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: AppColors.tandoorSoft,
-                    child: Text(
-                      widget.currentUserName.isNotEmpty
-                          ? widget.currentUserName[0]
-                          : 'U',
-                      style: const TextStyle(
-                        color: AppColors.tandoor,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
+              child: InkWell(
+                onTap: widget.onTapUser ?? () => widget.onNavigate('profile'),
+                borderRadius: BorderRadius.circular(20),
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppColors.tandoorSoft,
+                  backgroundImage: (widget.currentUserPhotoUrl != null &&
+                          widget.currentUserPhotoUrl!.isNotEmpty)
+                      ? NetworkImage(widget.currentUserPhotoUrl!)
+                      : null,
+                  child: (widget.currentUserPhotoUrl == null ||
+                          widget.currentUserPhotoUrl!.isEmpty)
+                      ? Text(
+                          widget.currentUserName.isNotEmpty
+                              ? widget.currentUserName[0].toUpperCase()
+                              : 'U',
+                          style: const TextStyle(
+                            color: AppColors.tandoor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        )
+                      : null,
                 ),
               ),
             ),
@@ -382,6 +392,7 @@ class _BmbResponsiveScaffoldState extends State<BmbResponsiveScaffold> {
         ],
       ),
     );
+
   }
 
   Widget _buildRailItem(
@@ -687,55 +698,82 @@ class _BmbResponsiveScaffoldState extends State<BmbResponsiveScaffold> {
                 const SizedBox(height: 8),
 
                 // User box (Rule 1 & 3: Never truncated!)
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.line),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: AppColors.tandoorSoft,
-                        child: Text(
-                          widget.currentUserName.isNotEmpty
-                              ? widget.currentUserName[0]
-                              : 'U',
-                          style: const TextStyle(
-                            color: AppColors.tandoor,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
+                InkWell(
+                  onTap: () {
+                    // Close drawer first if open
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    }
+                    if (widget.onTapUser != null) {
+                      widget.onTapUser!();
+                    } else {
+                      widget.onNavigate('profile');
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.line),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppColors.tandoorSoft,
+                          backgroundImage: (widget.currentUserPhotoUrl != null &&
+                                  widget.currentUserPhotoUrl!.isNotEmpty)
+                              ? NetworkImage(widget.currentUserPhotoUrl!)
+                              : null,
+                          child: (widget.currentUserPhotoUrl == null ||
+                                  widget.currentUserPhotoUrl!.isEmpty)
+                              ? Text(
+                                  widget.currentUserName.isNotEmpty
+                                      ? widget.currentUserName[0].toUpperCase()
+                                      : 'U',
+                                  style: const TextStyle(
+                                    color: AppColors.tandoor,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.currentUserName,
+                                style: AppText.bodyBold.copyWith(fontSize: 12.5),
+                                maxLines: 2,
+                                overflow: TextOverflow.visible,
+                              ),
+                              Text(
+                                widget.currentUserRole,
+                                style: AppText.caption.copyWith(
+                                  fontSize: 11,
+                                  color: AppColors.muted,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.visible,
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.currentUserName,
-                              style: AppText.bodyBold.copyWith(fontSize: 12.5),
-                              maxLines: 2,
-                              overflow: TextOverflow.visible,
-                            ),
-                            Text(
-                              widget.currentUserRole,
-                              style: AppText.caption.copyWith(
-                                fontSize: 11,
-                                color: AppColors.muted,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.visible,
-                            ),
-                          ],
+                        const Icon(
+                          Icons.chevron_right,
+                          size: 16,
+                          color: AppColors.muted,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
+
               ],
             ),
           ),

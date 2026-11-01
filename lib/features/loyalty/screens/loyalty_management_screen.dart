@@ -10,7 +10,9 @@ import '../../../core/widgets/bmb_card.dart';
 import '../../../core/widgets/bmb_kpi_tile.dart';
 import '../../../core/widgets/bmb_screen_header.dart';
 import '../../../core/widgets/bmb_tag.dart';
+import '../../../core/widgets/demo_banner.dart';
 import '../../../mock/mock_state.dart';
+
 import '../../../models/models.dart';
 
 /// Module 17 — Loyalty Management
@@ -130,8 +132,10 @@ class _LoyaltyManagementScreenState
               ),
             ),
           ),
+          const DemoBanner(),
           Expanded(
             child: SingleChildScrollView(
+
               padding: EdgeInsets.symmetric(
                 horizontal: AppSpacing.horizontalPadding(context),
                 vertical: Gap.lg,

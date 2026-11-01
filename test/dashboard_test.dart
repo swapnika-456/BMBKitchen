@@ -266,7 +266,8 @@ void main() {
       expect(find.byKey(const Key('quick_stat_tables')), findsOneWidget);
       expect(find.byKey(const Key('quick_stat_kitchen_queue')), findsOneWidget);
       expect(find.byKey(const Key('quick_stat_low_stock')), findsOneWidget);
-      expect(find.byKey(const Key('quick_stat_day_closing')), findsOneWidget);
+      expect(find.text('Right now'), findsOneWidget);
+      expect(find.text("Today's Status"), findsOneWidget);
       expect(find.text('0/1'), findsOneWidget);
       expect(find.text('6'), findsOneWidget);
 

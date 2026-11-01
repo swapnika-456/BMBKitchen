@@ -67,6 +67,27 @@ class AuthController extends AsyncNotifier<User?> {
     }
   }
 
+  Future<void> refreshUser() async {
+    state = await AsyncValue.guard(() => _repository.checkAuth());
+  }
+
+  Future<void> uploadProfileImage({
+    required String organizationId,
+    required String userId,
+    required dynamic file,
+  }) async {
+    final updated = await _repository.uploadProfileImage(
+      organizationId: organizationId,
+      userId: userId,
+      file: file,
+    );
+    state = AsyncValue.data(updated);
+  }
+
+  Future<String> sendPasswordReset(String email) async {
+    return await _repository.forgotPassword(email);
+  }
+
   Future<void> logout() async {
     state = const AsyncValue.loading();
     await _repository.logout();
@@ -74,3 +95,4 @@ class AuthController extends AsyncNotifier<User?> {
     state = const AsyncValue.data(null);
   }
 }
+
